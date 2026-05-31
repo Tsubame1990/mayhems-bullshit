@@ -408,6 +408,58 @@ body {
   .share-text { font-size: 11px; }
   .intro h1 { font-size: clamp(28px, 9vw, 44px); }
 }
+
+.harper-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+.harper-label {
+  font-size: 16px;
+  color: var(--text2);
+  letter-spacing: .04em;
+}
+.toggle {
+  position: relative;
+  width: 56px;
+  height: 30px;
+  flex-shrink: 0;
+}
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border: 0.5px solid var(--border2);
+  border-radius: 15px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.toggle input:checked + .toggle-track {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.3);
+}
+.toggle-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text3);
+  transition: transform .2s, background .2s;
+  pointer-events: none;
+}
+.toggle input:checked ~ .toggle-thumb {
+  transform: translateX(26px);
+  background: var(--text2);
+}
 </style>
 </head>
 <body>
@@ -419,6 +471,18 @@ body {
     <div class="intro-eyebrow">A diagnostic assessment</div>
     <h1>Kinesexual<br>or <em>Kindredsexual?</em></h1>
     <p class="intro-desc">A clinically rigorous* exploration of undead attraction. Answer honestly. No one is watching.<br><br><span style="color:var(--text3);font-size:11px">*Not clinically rigorous. 32 questions across four sections.</span></p>
+    <div class="harper-wrap">
+      <span class="harper-label">Are you Harper?</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:14px;color:var(--text3);" id="harper-no-label">No</span>
+        <label class="toggle">
+          <input type="checkbox" id="harper-toggle" onchange="checkHarper()">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+        <span style="font-size:14px;color:var(--text3);" id="harper-yes-label">Yes</span>
+      </div>
+    </div>
     <button class="start-btn" onclick="startQuiz()">Begin assessment</button>
   </div>
 
@@ -442,6 +506,12 @@ body {
   <button class="next-btn" id="next-btn" onclick="nextSection()">Continue →</button>
 
   <!-- RESULTS -->
+  <div class="result-wrap" id="harper-result" style="display:none; text-align:center; padding:4rem 0; animation: fadeup .5s ease forwards;">
+    <div style="font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--text3);margin-bottom:1.5rem;">Your result</div>
+    <div style="font-family:'IM Fell English',serif;font-size:clamp(48px,10vw,80px);color:var(--text);margin-bottom:3rem;line-height:1.2;">You like Faun.</div>
+    <button class="retake-btn" onclick="retakeHarper()">I am not Harper</button>
+  </div>
+
   <div class="result-wrap" id="result-wrap">
     <div class="result-eyebrow">Your orientation</div>
     <div class="result-type" id="r-type"></div>
@@ -459,7 +529,10 @@ body {
       <div class="spectrum-track"><div class="spectrum-dot" id="r-dot" style="left:50%"></div></div>
       <div class="spectrum-ends"><span>Kinesexual</span><span>Kindredsexual</span></div>
     </div>
-    <div class="result-desc" id="r-desc"></div>
+    <div id="r-quote" style="display:none;margin-bottom:1.5rem;padding:1.25rem 1.5rem;border-left:1px solid var(--border2);">
+      <div id="r-quote-text" style="font-family:'IM Fell English',serif;font-size:20px;font-style:italic;color:var(--text2);line-height:1.8;margin-bottom:.75rem;"></div>
+      <div id="r-quote-attr" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);"></div>
+    </div>
     <div class="result-traits" id="r-traits"></div>
     <div class="share-box">
       <div class="share-label">Share your result</div>
@@ -520,33 +593,42 @@ const sections = [{ eyebrow: "", title: "", questions: shuffle(allQuestions) }];
 
 const results = [
   {
-    minKine: 0, maxKine: 30, minKindred: 0, maxKindred: 30,
     check: (k, kr) => k > kr * 2,
     type: "Purely Kinesexual",
-    desc: "You are, at your core, drawn to life, to the warmth of it, the mess of it, the terrifying brevity. You find living bodies fascinating rather than inconvenient. Mortality isn't a flaw in your partners; it may be the point. Your Humanity score is probably doing well. Your Hunger, less so. You have likely been told your attachment to mortals is 'concerning' by at least one Elder who meant it as an insult.",
+    quote: "Remember those who prayed with you, fought with you, played with you. Especially remember those who loved you, and who you loved.",
+    quoteAttr: "Nisha Kapoor, Toreador Ambassador (V5 Camarilla)",
+    desc: "You are, at your core, drawn to life, to the warmth of it, the mess of it, the terrifying brevity. You find living bodies fascinating rather than inconvenient. Mortality isn't a flaw in your partners; it may be the point. Your Humanity score is probably doing well. Your Hunger, less so. You have likely been told your attachment to mortals is concerning by at least one Elder who meant it as an insult.",
     traits: ["Warmth-seeking", "Finds biological mess intimate", "Protective instinct", "Feeding as devotion", "Probably too attached to a ghoul", "Counts heartbeats voluntarily"]
   },
   {
     check: (k, kr) => k > kr * 1.3 && k <= kr * 2,
     type: "Strongly Kinesexual",
+    quote: "We Kindred must, in a way, be devoted to mortality. If we lose sight of the temporal nature of life, if we forget about the vagaries of accident, disease, the fragility of the bodies and minds of those we drink from, we risk growing cold and ungentle, leaving bloody wakes behind us on our path toward eternity.",
+    quoteAttr: "Roderick Lord, Hellene Courtier of Edinburgh (V5 Camarilla)",
     desc: "You prefer the living, though you're not entirely without appreciation for other Kindred. The warmth, the trust, the specific vulnerability of a mortal who chooses to stay near you, that's where your interest lives. You attend Elysium for political reasons. You leave early.",
     traits: ["Warmth-seeking", "Feeds with genuine care", "Finds aging poignant", "Sociable with Kindred, intimate with kine", "Your sire has opinions about this", "Occasionally envies mortals"]
   },
   {
     check: (k, kr) => Math.abs(k - kr) <= k * 0.3,
     type: "Thoroughly Bisanguine",
+    quote: "It's not just a hunger; it's an addiction: a complex urge to gorge ourselves on the infinitely varied essence of man.",
+    quoteAttr: "V5 Corebook",
     desc: "You don't have a type. You have a mood. Living partners offer something the dead can't, warmth, need, the gorgeous temporariness of them. Kindred partners offer something mortals can't, understanding, endurance, the relief of no pretending. You navigate both worlds with genuine investment in both, which means twice the complications and twice the interesting evenings. Everyone you've ever dated is slightly unsure where they stood with you.",
     traits: ["No consistent type", "Contextually driven", "Navigates power dynamics fluently", "Actually enjoys Elysium", "Everyone's slightly unsure where they stand", "Diplomatically evasive about preferences"]
   },
   {
     check: (k, kr) => kr > k * 1.3 && kr <= k * 2,
     type: "Strongly Kindredsexual",
+    quote: null,
+    quoteAttr: null,
     desc: "You don't dislike mortals. You simply find it difficult to be fully present with them. There is a performance required, the eye contact that cannot last too long, the pretending you don't smell what you smell. With other Kindred, you can stop performing. You can exist at full resolution. This is not coldness. It is preference, and preference is not a crime under the Traditions.",
     traits: ["Relaxes around other predators", "Finds mortal intimacy tiring", "Attracted to stillness", "Appreciates the Beast in others", "Strong opinions about the Traditions", "Feeds efficiently, without ceremony"]
   },
   {
     check: (k, kr) => kr > k * 2,
     type: "Purely Kindredsexual",
+    quote: "As you feel the blood leaving their body, one last gasp of air, and they stare back into your eyes... in that moment you are God.",
+    quoteAttr: "V5 Camarilla",
     desc: "Mortals are fine. You are not a monster. You simply have no interest in them as partners, they are too warm, too loud, too relentlessly alive. What draws you is the other thing: two predators agreeing to hold still. The intimacy of being fully known by something that also cannot die. Your sire probably considers this healthy. Your Humanity score may be arriving at its own conclusions.",
     traits: ["Drawn to stillness and cold", "Attracted to the Beast", "Finds mortal intimacy alienating", "Vitae as intimacy", "Unsettlingly comfortable in Elysium", "Has fed from a corpse and did not mind"]
   }
@@ -558,6 +640,13 @@ let totalAnswered = 0;
 const totalQ = allQuestions.length;
 
 function startQuiz() {
+  const isHarper = document.getElementById('harper-toggle').checked;
+  if (isHarper) {
+    document.getElementById('intro').style.display = 'none';
+    document.getElementById('harper-result').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
   document.getElementById('intro').style.display = 'none';
   document.getElementById('progress').classList.add('active');
   loadSection(0);
@@ -667,7 +756,17 @@ function showResults() {
   document.getElementById('r-type').textContent = result.type;
   document.getElementById('r-kine-score').textContent = kine;
   document.getElementById('r-kindred-score').textContent = kindred;
-  document.getElementById('r-desc').textContent = result.desc;
+  // Quote
+  const quoteEl = document.getElementById('r-quote');
+  const quoteText = document.getElementById('r-quote-text');
+  const quoteAttr = document.getElementById('r-quote-attr');
+  if (result.quote && result.quote !== null) {
+    quoteText.textContent = '"' + result.quote + '"';
+    quoteAttr.textContent = '— ' + result.quoteAttr;
+    quoteEl.style.display = 'block';
+  } else {
+    quoteEl.style.display = 'none';
+  }
 
   const traitsWrap = document.getElementById('r-traits');
   traitsWrap.innerHTML = result.traits.map(t => `<span class="trait">${t}</span>`).join('');
@@ -678,7 +777,7 @@ function showResults() {
     document.getElementById('r-dot').style.left = Math.min(95, Math.max(5, kindredPct)) + '%';
   }, 100);
 
-  const shareText = `🩸 Kinesexual or Kindredsexual Quiz\n\nResult: ${result.type}\nKinesexual score: ${kine} | Kindredsexual score: ${kindred}\n\n"${result.desc.slice(0, 120)}..."\n\n, take the quiz yourself`;
+  const shareText = `🩸 Kinesexual or Kindredsexual Quiz\n\nResult: ${result.type}\nKinesexual score: ${kine} | Kindredsexual score: ${kindred}\n\n"${result.quote || ''}"\n— ${result.quoteAttr || ''}\n\ntake the quiz yourself`;
   document.getElementById('share-text').textContent = shareText;
 
   document.getElementById('result-wrap').classList.add('active');
@@ -696,6 +795,20 @@ function copyResult() {
       btn.classList.remove('copied');
     }, 2000);
   });
+}
+
+function checkHarper() {
+  const checked = document.getElementById('harper-toggle').checked;
+  document.getElementById('harper-no-label').style.color = checked ? 'var(--text3)' : 'var(--text2)';
+  document.getElementById('harper-yes-label').style.color = checked ? 'var(--text2)' : 'var(--text3)';
+}
+
+function retakeHarper() {
+  document.getElementById('harper-result').style.display = 'none';
+  document.getElementById('harper-toggle').checked = false;
+  document.getElementById('intro').style.display = 'block';
+  document.getElementById('progress').classList.remove('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function retake() {
