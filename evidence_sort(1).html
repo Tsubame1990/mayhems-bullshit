@@ -3,17 +3,17 @@
   Society of Leopold hunter-tracking minigame (Vampire: The Masquerade chronicle)
 
   HOW IT WORKS
-    - 6 supply categories, 3 items drawn at random from each = 18 tiles.
-    - Select exactly 3 tiles, then Confirm.
-    - All 3 from one category -> that category locks and clears.
-    - 2 of 3 correct -> "one away" hint.
+    - 4 supply categories, 4 items drawn at random from each = 16 tiles.
+    - Select exactly 4 tiles, then Confirm.
+    - All 4 from one category -> that category locks and clears.
+    - 3 of 4 correct -> "one away" hint.
     - 4 mistakes and the run fails (reshuffle to retry).
-    - Clear all six -> Stage 2 unlocks (hook your map minigame here).
+    - Clear all four -> Stage 2 unlocks (hook your map minigame here).
 
   EDITING THE ITEMS
     The CATEGORIES object below is a snapshot of the resource DB
     (peoria_purchases.db). To change items, regenerate it from the DB and
-    paste it in. Each category needs at least 3 items.
+    paste it in. Each category needs at least 4 items.
 
   STAGE 2 HOOK
     See onStageComplete() near the bottom.
@@ -23,7 +23,7 @@
     <div class="dossier-tag">DOSSIER // PEORIA IL — RESUPPLY TRACE</div>
     <h1>The Ledger</h1>
     <p class="brief">Purchase records, scraped and scattered. Sort each buy back to what
-      it's <em>for</em>. Six supply purposes. Three items each. The pattern is in the sorting.</p>
+      it's <em>for</em>. Four supply purposes. Four items each. The pattern is in the sorting.</em>
   </header>
 
   <section class="statusbar" aria-live="polite">
@@ -153,7 +153,7 @@
   @keyframes drop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 
   .grid{
-    display:grid;grid-template-columns:repeat(3,1fr);gap:9px;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:9px;
   }
   .tile{
     position:relative;min-height:78px;padding:10px 8px;
@@ -231,28 +231,24 @@
 <script>
 /* ============================================================
    DATA SNAPSHOT — regenerate from peoria_purchases.db to edit.
-   Each category needs at least 3 items.
+   Each category needs at least 4 items.
    ============================================================ */
 const CATEGORIES = {
-  "Incendiary materials": ["Gasoline (bulk cans)","Charcoal starter fluid","Styrofoam / packing foam","Rags & cloth strips","Glass bottles (cases)","Road flares (box)"],
   "Explosive precursors": ["Ammonium nitrate fertilizer","Acetone / paint thinner","Pool chlorine + acid","Cat litter (bulk)","Nails & ball bearings","Pipe fittings & end caps"],
-  "Anti-Kindred tools": ["Hardwood dowels / stakes","UV / blacklight bulbs","Heavy-duty flashlights","Machete / hatchet","Silver chain / items","Salt (bulk sacks)"],
-  "Surveillance & logistics": ["Burner phones (scattered)","County atlas / maps","Police scanner","Binoculars","Prepaid gift cards"],
-  "Safehouse supplies": ["Blackout plastic sheeting","Portable generator","Trauma / first-aid kits","Padlocks & chains","Respirators / gas masks","Non-perishable food (bulk)"],
-  "Cover & concealment": ["Church candles / supplies","Thrift-store clothing","Industrial cleaner (bulk)"]
+  "Religious artifacts": ["Hardwood stakes","UV / blacklight bulbs","Silver crucifix","Holy water (vials)","Communion wafers","Wooden rosaries","Brass censer","Consecrated oil"],
+  "Safehouse supplies": ["Blackout plastic sheeting","Portable generator","Trauma / first-aid kits","Padlocks & chains","Respirators / gas masks","Non-perishable food (bulk)","Police scanner"],
+  "Weaponry / ammo": ["Machete / hatchet","Shotgun shells (buckshot)","Hollow-point ammunition","Crossbow + bolts","Combat knives","Kevlar vest / plates","Brass knuckles"]
 };
 
-const ITEMS_PER_GROUP = 3;
+const ITEMS_PER_GROUP = 4;
 const MAX_MISTAKES = 4;
 
 // Colour assigned to each category as it solves (order of appearance).
 const CAT_COLORS = {
-  "Incendiary materials": "#9c2b1f",
   "Explosive precursors": "#a98b4b",
-  "Anti-Kindred tools": "#3d5a80",
-  "Surveillance & logistics": "#3f6d5f",
-  "Safehouse supplies": "#5b3a63",
-  "Cover & concealment": "#9c5227"
+  "Religious artifacts": "#5b3a63",
+  "Safehouse supplies": "#3f6d5f",
+  "Weaponry / ammo": "#9c2b1f"
 };
 
 let round, selected, mistakes, solvedCats;
@@ -387,7 +383,7 @@ function onFail(){
 }
 
 /* ============================================================
-   STAGE 2 HOOK — fires when all six categories are sorted.
+   STAGE 2 HOOK — fires when all four categories are sorted.
    Wire your Peoria map minigame here (redirect, reveal, etc.).
    ============================================================ */
 function onStageComplete(){
