@@ -1,0 +1,422 @@
+<!--
+  THE LEDGER — Stage 1: Evidence Sorting
+  Society of Leopold hunter-tracking minigame (Vampire: The Masquerade chronicle)
+
+  HOW IT WORKS
+    - 6 supply categories, 3 items drawn at random from each = 18 tiles.
+    - Select exactly 3 tiles, then Confirm.
+    - All 3 from one category -> that category locks and clears.
+    - 2 of 3 correct -> "one away" hint.
+    - 4 mistakes and the run fails (reshuffle to retry).
+    - Clear all six -> Stage 2 unlocks (hook your map minigame here).
+
+  EDITING THE ITEMS
+    The CATEGORIES object below is a snapshot of the resource DB
+    (peoria_purchases.db). To change items, regenerate it from the DB and
+    paste it in. Each category needs at least 3 items.
+
+  STAGE 2 HOOK
+    See onStageComplete() near the bottom.
+-->
+<div id="app">
+  <header class="masthead">
+    <div class="dossier-tag">DOSSIER // PEORIA IL — RESUPPLY TRACE</div>
+    <h1>The Ledger</h1>
+    <p class="brief">Purchase records, scraped and scattered. Sort each buy back to what
+      it's <em>for</em>. Six supply purposes. Three items each. The pattern is in the sorting.</p>
+  </header>
+
+  <section class="statusbar" aria-live="polite">
+    <div class="cleared-track" id="clearedTrack"></div>
+    <div class="mistakes">
+      <span class="mistakes-label">Missteps</span>
+      <div class="pips" id="pips"></div>
+    </div>
+  </section>
+
+  <div id="solved"></div>
+  <div id="grid" class="grid" role="group" aria-label="Evidence tiles"></div>
+
+  <div class="toast" id="toast" role="status" aria-live="assertive"></div>
+
+  <div class="controls">
+    <button id="deselect" class="btn btn-ghost">Clear selection</button>
+    <button id="shuffle" class="btn btn-ghost">Shuffle</button>
+    <button id="confirm" class="btn btn-solid" disabled>Confirm group</button>
+  </div>
+
+  <div class="overlay" id="overlay" hidden>
+    <div class="overlay-card" id="overlayCard"></div>
+  </div>
+</div>
+
+<style>
+  :root{
+    --font-display:'Impact','Haettenschweiler','Franklin Gothic Bold','Arial Narrow Bold',sans-serif;
+    --font-body:'Iowan Old Style','Palatino Linotype','Palatino',Georgia,'Times New Roman',serif;
+    --font-mono:'SFMono-Regular','Consolas','Liberation Mono',Menlo,monospace;
+    --ink:#0a0b0f;
+    --panel:#12141c;
+    --panel-2:#171a24;
+    --line:#282c3a;
+    --fog:#8b93a7;
+    --paper:#e7e3d8;
+    --blood:#7c1420;
+    --blood-lit:#b31d2b;
+    --amber:#c8862a;
+    --brass:#a98b4b;
+    --verd:#3f6d5f;
+    --slate:#3d5a80;
+    --plum:#5b3a63;
+    --rust:#9c5227;
+    --ok:#4a7a52;
+    --radius:3px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #16131a 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,.008) 3px),
+      var(--ink);
+    color:var(--paper);
+    font-family:var(--font-body);
+    min-height:100vh;
+    padding:32px 18px 64px;
+  }
+  #app{max-width:760px;margin:0 auto}
+
+  .masthead{text-align:center;margin-bottom:26px}
+  .dossier-tag{
+    font-family:var(--font-mono);
+    font-size:11px;letter-spacing:.32em;color:var(--brass);
+    text-transform:uppercase;margin-bottom:14px;
+    opacity:.85;
+  }
+  .masthead h1{
+    font-family:var(--font-display);
+    font-weight:700;font-size:clamp(44px,10vw,78px);
+    letter-spacing:.02em;line-height:.9;margin:0;
+    color:var(--paper);
+    text-transform:uppercase;
+    position:relative;display:inline-block;
+  }
+  .masthead h1::after{
+    content:"";position:absolute;left:8%;right:8%;bottom:-8px;height:2px;
+    background:linear-gradient(90deg,transparent,var(--blood-lit),transparent);
+  }
+  .brief{
+    max-width:460px;margin:20px auto 0;color:var(--fog);
+    font-size:15px;line-height:1.55;font-style:italic;
+  }
+  .brief em{color:var(--paper);font-style:italic}
+
+  .statusbar{
+    display:flex;justify-content:space-between;align-items:center;
+    gap:16px;margin:0 0 18px;padding:10px 14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  }
+  .cleared-track{display:flex;gap:6px;flex-wrap:wrap}
+  .cleared-chip{
+    font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;padding:3px 8px;border-radius:2px;
+    border:1px solid var(--line);color:var(--fog);opacity:.5;
+  }
+  .cleared-chip.done{opacity:1;color:var(--ink);border-color:transparent}
+  .mistakes{display:flex;align-items:center;gap:10px}
+  .mistakes-label{
+    font-family:var(--font-mono);font-size:10px;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--fog);
+  }
+  .pips{display:flex;gap:6px}
+  .pip{width:11px;height:11px;border-radius:50%;
+    border:1px solid var(--blood);background:transparent;transition:.25s}
+  .pip.spent{background:var(--blood-lit);border-color:var(--blood-lit);
+    box-shadow:0 0 10px rgba(179,29,43,.6)}
+
+  #solved{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+  .solved-row{
+    display:flex;align-items:center;gap:14px;padding:12px 16px;
+    border-radius:var(--radius);animation:drop .45s cubic-bezier(.2,.8,.2,1);
+    color:var(--ink);
+  }
+  .solved-row .cat{
+    font-family:var(--font-display);font-weight:700;
+    font-size:17px;letter-spacing:.06em;text-transform:uppercase;
+    min-width:170px;
+  }
+  .solved-row .items{
+    font-family:var(--font-mono);font-size:12px;letter-spacing:.02em;
+    opacity:.85;
+  }
+  @keyframes drop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
+  .grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:9px;
+  }
+  .tile{
+    position:relative;min-height:78px;padding:10px 8px;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:var(--radius);
+    color:var(--paper);cursor:pointer;user-select:none;
+    font-family:var(--font-display);font-weight:500;
+    font-size:15px;letter-spacing:.02em;line-height:1.1;
+    transition:transform .12s, border-color .18s, background .18s;
+  }
+  .tile:hover{border-color:var(--brass)}
+  .tile:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .tile.sel{
+    background:linear-gradient(180deg,#241016,#1a0c11);
+    border-color:var(--blood-lit);color:#fff;
+    transform:translateY(-2px);
+    box-shadow:0 6px 18px rgba(0,0,0,.5), inset 0 0 0 1px rgba(179,29,43,.35);
+  }
+  .tile.wrong{animation:shake .4s}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}
+    30%,70%{transform:translateX(4px)}50%{transform:translateX(-4px)}}
+
+  .controls{display:flex;gap:10px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+  .btn{
+    font-family:var(--font-display);font-weight:600;
+    font-size:15px;letter-spacing:.08em;text-transform:uppercase;
+    padding:12px 22px;border-radius:var(--radius);cursor:pointer;
+    transition:.18s;border:1px solid var(--line);
+  }
+  .btn-ghost{background:transparent;color:var(--fog)}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--brass)}
+  .btn-solid{background:var(--blood);color:#fff;border-color:var(--blood-lit)}
+  .btn-solid:hover:not(:disabled){background:var(--blood-lit);
+    box-shadow:0 0 16px rgba(179,29,43,.45)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+
+  .toast{
+    position:fixed;left:50%;top:24px;transform:translateX(-50%) translateY(-20px);
+    background:var(--panel-2);border:1px solid var(--brass);color:var(--paper);
+    font-family:var(--font-mono);font-size:13px;letter-spacing:.04em;
+    padding:10px 18px;border-radius:var(--radius);opacity:0;pointer-events:none;
+    transition:opacity .3s, transform .3s;z-index:50;
+    visibility:hidden;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);visibility:visible}
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(4,4,7,.82);
+    display:flex;align-items:center;justify-content:center;padding:24px;z-index:60;
+    backdrop-filter:blur(3px);
+  }
+  .overlay-card{
+    max-width:460px;width:100%;background:var(--panel);
+    border:1px solid var(--line);border-top:3px solid var(--blood-lit);
+    border-radius:var(--radius);padding:34px 30px;text-align:center;
+    animation:drop .4s;
+  }
+  .overlay-card h2{
+    font-family:var(--font-display);font-weight:700;
+    font-size:34px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 10px;
+  }
+  .overlay-card p{color:var(--fog);font-size:15px;line-height:1.6;margin:0 0 22px}
+  .overlay-card .win h2{color:var(--brass)}
+
+  @media(max-width:520px){
+    .solved-row{flex-direction:column;align-items:flex-start;gap:4px}
+    .solved-row .cat{min-width:0}
+    .tile{font-size:13px;min-height:70px}
+    .masthead h1{font-size:clamp(38px,13vw,60px)}
+  }
+</style>
+
+<script>
+/* ============================================================
+   DATA SNAPSHOT — regenerate from peoria_purchases.db to edit.
+   Each category needs at least 3 items.
+   ============================================================ */
+const CATEGORIES = {
+  "Incendiary materials": ["Gasoline (bulk cans)","Charcoal starter fluid","Styrofoam / packing foam","Rags & cloth strips","Glass bottles (cases)","Road flares (box)"],
+  "Explosive precursors": ["Ammonium nitrate fertilizer","Acetone / paint thinner","Pool chlorine + acid","Cat litter (bulk)","Nails & ball bearings","Pipe fittings & end caps"],
+  "Anti-Kindred tools": ["Hardwood dowels / stakes","UV / blacklight bulbs","Heavy-duty flashlights","Machete / hatchet","Silver chain / items","Salt (bulk sacks)"],
+  "Surveillance & logistics": ["Burner phones (scattered)","County atlas / maps","Police scanner","Binoculars","Prepaid gift cards"],
+  "Safehouse supplies": ["Blackout plastic sheeting","Portable generator","Trauma / first-aid kits","Padlocks & chains","Respirators / gas masks","Non-perishable food (bulk)"],
+  "Cover & concealment": ["Church candles / supplies","Thrift-store clothing","Industrial cleaner (bulk)"]
+};
+
+const ITEMS_PER_GROUP = 3;
+const MAX_MISTAKES = 4;
+
+// Colour assigned to each category as it solves (order of appearance).
+const CAT_COLORS = {
+  "Incendiary materials": "#9c2b1f",
+  "Explosive precursors": "#a98b4b",
+  "Anti-Kindred tools": "#3d5a80",
+  "Surveillance & logistics": "#3f6d5f",
+  "Safehouse supplies": "#5b3a63",
+  "Cover & concealment": "#9c5227"
+};
+
+let round, selected, mistakes, solvedCats;
+
+const $ = s => document.querySelector(s);
+const grid = $("#grid"), solvedEl = $("#solved"),
+      pipsEl = $("#pips"), trackEl = $("#clearedTrack"),
+      toastEl = $("#toast"), confirmBtn = $("#confirm"),
+      overlay = $("#overlay"), overlayCard = $("#overlayCard");
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+function sample(arr,n){return shuffle([...arr]).slice(0,n);}
+
+function newRound(){
+  const cats = Object.keys(CATEGORIES);
+  round = [];
+  cats.forEach(cat=>{
+    sample(CATEGORIES[cat], ITEMS_PER_GROUP).forEach(item=>{
+      round.push({item, cat});
+    });
+  });
+  shuffle(round);
+  selected = new Set();
+  mistakes = 0;
+  solvedCats = [];
+  overlay.hidden = true;
+  render();
+}
+
+function render(){
+  // pips
+  pipsEl.innerHTML = "";
+  for(let i=0;i<MAX_MISTAKES;i++){
+    const p=document.createElement("div");
+    p.className="pip"+(i<mistakes?" spent":"");
+    pipsEl.appendChild(p);
+  }
+  // cleared track
+  const allCats = Object.keys(CATEGORIES);
+  trackEl.innerHTML="";
+  allCats.forEach(cat=>{
+    const c=document.createElement("span");
+    const done=solvedCats.includes(cat);
+    c.className="cleared-chip"+(done?" done":"");
+    c.textContent = done ? cat : "•••";
+    if(done){c.style.background=CAT_COLORS[cat];}
+    trackEl.appendChild(c);
+  });
+  // solved rows
+  solvedEl.innerHTML="";
+  solvedCats.forEach(cat=>{
+    const row=document.createElement("div");
+    row.className="solved-row";
+    row.style.background=CAT_COLORS[cat];
+    row.innerHTML=`<span class="cat">${cat}</span>
+      <span class="items">${CATEGORIES_shown(cat).join("  ·  ")}</span>`;
+    solvedEl.appendChild(row);
+  });
+  // grid (unsolved only)
+  grid.innerHTML="";
+  round.filter(t=>!solvedCats.includes(t.cat)).forEach(t=>{
+    const el=document.createElement("button");
+    el.className="tile"+(selected.has(t.item)?" sel":"");
+    el.textContent=t.item;
+    el.setAttribute("aria-pressed", selected.has(t.item));
+    el.onclick=()=>toggle(t.item);
+    grid.appendChild(el);
+  });
+  confirmBtn.disabled = selected.size!==ITEMS_PER_GROUP;
+}
+
+// which items of a solved category were actually shown this round
+function CATEGORIES_shown(cat){
+  return round.filter(t=>t.cat===cat).map(t=>t.item);
+}
+
+function toggle(item){
+  if(selected.has(item)) selected.delete(item);
+  else if(selected.size<ITEMS_PER_GROUP) selected.add(item);
+  render();
+}
+
+function toast(msg){
+  toastEl.textContent=msg;
+  toastEl.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>toastEl.classList.remove("show"),1800);
+}
+
+function confirmGroup(){
+  const picks=[...selected];
+  const cats=picks.map(item=>round.find(t=>t.item===item).cat);
+  const counts={};
+  cats.forEach(c=>counts[c]=(counts[c]||0)+1);
+  const top=Math.max(...Object.values(counts));
+
+  if(top===ITEMS_PER_GROUP){
+    const cat=cats[0];
+    solvedCats.push(cat);
+    selected.clear();
+    render();
+    if(solvedCats.length===Object.keys(CATEGORIES).length){
+      setTimeout(onStageComplete, 550);
+    } else {
+      toast(`Sorted: ${cat}`);
+    }
+  } else {
+    mistakes++;
+    // flash wrong
+    [...grid.children].forEach(el=>{
+      if(selected.has(el.textContent)) el.classList.add("wrong");
+    });
+    setTimeout(()=>{
+      [...grid.children].forEach(el=>el.classList.remove("wrong"));
+    },400);
+    if(top===ITEMS_PER_GROUP-1) toast("One away.");
+    else toast("That's not a set.");
+    selected.clear();
+    render();
+    if(mistakes>=MAX_MISTAKES) onFail();
+  }
+}
+
+function onFail(){
+  overlayCard.className="overlay-card";
+  overlayCard.innerHTML=`
+    <h2>Trail Lost</h2>
+    <p>Too many wrong turns. The purchases blur back into noise.
+       Reshuffle the records and work them again.</p>
+    <button class="btn btn-solid" onclick="newRound()">Re-open the file</button>`;
+  overlay.hidden=false;
+}
+
+/* ============================================================
+   STAGE 2 HOOK — fires when all six categories are sorted.
+   Wire your Peoria map minigame here (redirect, reveal, etc.).
+   ============================================================ */
+function onStageComplete(){
+  overlayCard.className="overlay-card win";
+  overlayCard.innerHTML=`
+    <div class="win">
+      <h2>Pattern Confirmed</h2>
+      <p>Every buy sorted to its purpose. The shape of their operation is clear now,
+         gear, fire, and steel. Next: put it on the map and find where it all converges.</p>
+      <button class="btn btn-solid" onclick="stageTwo()">Proceed to the map</button>
+    </div>`;
+  overlay.hidden=false;
+}
+
+function stageTwo(){
+  // Placeholder. Replace with load of the map minigame.
+  toast("Stage 2 — map — hooks in here.");
+  overlay.hidden=true;
+}
+
+$("#confirm").onclick=confirmGroup;
+$("#deselect").onclick=()=>{selected.clear();render();};
+$("#shuffle").onclick=()=>{
+  // reshuffle positions of unsolved tiles only
+  const unsolved=round.filter(t=>!solvedCats.includes(t.cat));
+  shuffle(unsolved);
+  const solved=round.filter(t=>solvedCats.includes(t.cat));
+  round=[...solved,...unsolved];
+  render();
+};
+
+newRound();
+</script>
