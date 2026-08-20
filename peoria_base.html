@@ -1,0 +1,532 @@
+<!--
+THE LEDGER — Stage 2: The Base
+Society of Leopold hunter-tracking minigame (Vampire: The Masquerade chronicle)
+
+MECHANIC (data cross-reference, not a logic-grid puzzle)
+No clues to interpret this time. Players get two straight data sets:
+1. SUPPLIER MANIFESTS — which category each supplier moves, and which
+   stores it delivers to.
+2. STORE DIRECTORY — which real Peoria neighbourhood each store sits in,
+   grouped by neighbourhood.
+The task is pure cross-referencing: for a given neighbourhood, look up
+each of its stores in the supplier manifests, and tally which of the four
+Stage 1 categories (explosive precursors / religious artifacts / safehouse
+supplies / weaponry-ammo) show up among them. Exactly one neighbourhood's
+stores collectively cover all four — that's the base. No hidden logic,
+just addition; a player can literally tally it on paper.
+
+Per-neighbourhood scratch checklists (4 checkboxes) are provided for the
+player's own bookkeeping and are not scored. The graded step is picking
+the one neighbourhood at the bottom and confirming, same misstep-pip
+mechanic as Stage 1 (4 wrong picks and the trail is lost).
+
+REGION NAMES
+All ten neighbourhood labels are real Peoria, IL neighborhoods. Every
+supplier, store, and delivery relationship is invented for the chronicle
+and does not refer to any real business.
+
+EDITING THE PUZZLE
+SUPPLIERS lists each supplier's category and its customer stores (by
+name). STORES_BY_NEIGHBOURHOOD lists which stores sit in which real
+neighbourhood. BASE_NEIGHBOURHOOD is the ground truth. If you change
+either data set, recompute each neighbourhood's category coverage by
+hand (see the coverage table in the design notes) and make sure exactly
+one neighbourhood has all four.
+
+LINKED FROM
+evidence_sort(1).html's stageTwo() hook is intended to redirect here once
+Stage 1 clears.
+-->
+<div id="app">
+<header class="masthead">
+<div class="dossier-tag">DOSSIER // PEORIA IL — SUPPLY CHAIN TRACE</div>
+<h1>The Base</h1>
+<p class="brief">One neighbourhood's shops between them carry everything on
+the ledger — precursors, artifacts, safehouse gear, hardware. Cross-reference
+the supplier manifests against the store directory. Find the one
+neighbourhood covering all four, and there's a lead on the base.</p>
+</header>
+
+<section class="statusbar" aria-live="polite">
+<div class="remaining" id="remaining">Case open</div>
+<div class="mistakes">
+<span class="mistakes-label">Missteps</span>
+<div class="pips" id="pips"></div>
+</div>
+</section>
+
+<section class="manifests">
+<h2 class="section-title">Supplier Manifests</h2>
+<div id="supplierCards" class="supplier-cards"></div>
+</section>
+
+<section class="directory">
+<h2 class="section-title">Store Directory</h2>
+<p class="dir-hint">Grouped by neighbourhood. Tick off categories as you match stores to manifests — your notes only, not scored.</p>
+<div id="neighbourhoodBlocks" class="neighbourhood-blocks"></div>
+</section>
+
+<section class="answer">
+<h2 class="section-title">Call It</h2>
+<p class="answer-hint">Which neighbourhood is the base?</p>
+<div id="answerTiles" class="answer-tiles"></div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="assertive"></div>
+
+<div class="controls">
+<button id="confirm" class="btn btn-solid" disabled>Confirm</button>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+<div class="overlay-card" id="overlayCard"></div>
+</div>
+</div>
+
+<style>
+:root{
+--font-display:'Impact','Haettenschweiler','Franklin Gothic Bold','Arial Narrow Bold',sans-serif;
+--font-body:'Iowan Old Style','Palatino Linotype','Palatino',Georgia,'Times New Roman',serif;
+--font-mono:'SFMono-Regular','Consolas','Liberation Mono',Menlo,monospace;
+--ink:#0a0b0f;
+--panel:#12141c;
+--panel-2:#171a24;
+--line:#282c3a;
+--fog:#8b93a7;
+--paper:#e7e3d8;
+--blood:#7c1420;
+--blood-lit:#b31d2b;
+--amber:#c8862a;
+--brass:#a98b4b;
+--verd:#3f6d5f;
+--plum:#5b3a63;
+--rust:#9c2b1f;
+--ok:#4a7a52;
+--radius:3px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+background:
+radial-gradient(1200px 600px at 50% -10%, #16131a 0%, transparent 60%),
+repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,.008) 3px),
+var(--ink);
+color:var(--paper);
+font-family:var(--font-body);
+min-height:100vh;
+padding:32px 18px 64px;
+}
+#app{max-width:920px;margin:0 auto}
+
+.masthead{text-align:center;margin-bottom:26px}
+.dossier-tag{
+font-family:var(--font-mono);
+font-size:11px;letter-spacing:.32em;color:var(--brass);
+text-transform:uppercase;margin-bottom:14px;
+opacity:.85;
+}
+.masthead h1{
+font-family:var(--font-display);
+font-weight:700;font-size:clamp(40px,9vw,70px);
+letter-spacing:.02em;line-height:.9;margin:0;
+color:var(--paper);
+text-transform:uppercase;
+position:relative;display:inline-block;
+}
+.masthead h1::after{
+content:"";position:absolute;left:8%;right:8%;bottom:-8px;height:2px;
+background:linear-gradient(90deg,transparent,var(--blood-lit),transparent);
+}
+.brief{
+max-width:600px;margin:20px auto 0;color:var(--fog);
+font-size:15px;line-height:1.55;font-style:italic;
+}
+
+.statusbar{
+display:flex;justify-content:space-between;align-items:center;
+gap:16px;margin:0 0 22px;padding:10px 14px;
+background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+}
+.remaining{
+font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;
+text-transform:uppercase;color:var(--fog);
+}
+.mistakes{display:flex;align-items:center;gap:10px}
+.mistakes-label{
+font-family:var(--font-mono);font-size:10px;
+letter-spacing:.22em;text-transform:uppercase;color:var(--fog);
+}
+.pips{display:flex;gap:6px}
+.pip{width:11px;height:11px;border-radius:50%;
+border:1px solid var(--blood);background:transparent;transition:.25s}
+.pip.spent{background:var(--blood-lit);border-color:var(--blood-lit);
+box-shadow:0 0 10px rgba(179,29,43,.6)}
+
+.section-title{
+font-family:var(--font-display);font-weight:700;font-size:15px;
+letter-spacing:.1em;text-transform:uppercase;color:var(--brass);
+margin:0 0 10px;
+}
+.dir-hint{color:var(--fog);font-size:13px;margin:0 0 14px}
+
+.manifests{margin-bottom:30px}
+.supplier-cards{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:640px){.supplier-cards{grid-template-columns:repeat(2,1fr)}}
+.supplier-card{
+background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brass);
+border-radius:var(--radius);padding:14px;
+}
+.supplier-card .sup-name{
+font-family:var(--font-display);font-size:16px;letter-spacing:.02em;margin-bottom:4px;
+}
+.supplier-card .sup-cat{
+font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;
+text-transform:uppercase;margin-bottom:10px;
+}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+font-family:var(--font-mono);font-size:11px;padding:4px 8px;
+background:var(--panel-2);border:1px solid var(--line);border-radius:2px;
+color:var(--paper);
+}
+
+.directory{margin-bottom:30px}
+.neighbourhood-blocks{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:640px){.neighbourhood-blocks{grid-template-columns:repeat(2,1fr)}}
+.nb-block{
+background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+padding:14px;
+}
+.nb-block .nb-name{
+font-family:var(--font-display);font-size:16px;letter-spacing:.02em;margin-bottom:8px;
+}
+.nb-block .stores{list-style:none;margin:0 0 12px;padding:0;
+display:flex;flex-direction:column;gap:4px}
+.nb-block .stores li{
+font-size:13px;color:var(--fog);padding:4px 0;border-bottom:1px dashed var(--line);
+}
+.check-row{display:flex;flex-wrap:wrap;gap:10px}
+.check-item{display:flex;align-items:center;gap:5px;font-family:var(--font-mono);
+font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--fog)}
+.check-item input{accent-color:var(--brass)}
+
+.answer{margin-bottom:8px}
+.answer-hint{color:var(--fog);font-size:13px;margin:0 0 14px}
+.answer-tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+@media(min-width:640px){.answer-tiles{grid-template-columns:repeat(5,1fr)}}
+.answer-tile{
+padding:14px 8px;text-align:center;
+background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+cursor:pointer;transition:.15s;
+font-family:var(--font-display);font-size:13.5px;letter-spacing:.01em;
+}
+.answer-tile:hover{border-color:var(--brass)}
+.answer-tile.sel{
+background:linear-gradient(180deg,#241016,#1a0c11);
+border-color:var(--blood-lit);color:#fff;
+box-shadow:0 6px 18px rgba(0,0,0,.5), inset 0 0 0 1px rgba(179,29,43,.35);
+transform:translateY(-2px);
+}
+.answer-tile.wrong{animation:shake .4s}
+@keyframes shake{10%,90%{transform:translateX(-2px)}
+30%,70%{transform:translateX(4px)}50%{transform:translateX(-4px)}}
+
+.controls{display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+.btn{
+font-family:var(--font-display);font-weight:600;
+font-size:15px;letter-spacing:.08em;text-transform:uppercase;
+padding:12px 22px;border-radius:var(--radius);cursor:pointer;
+transition:.18s;border:1px solid var(--line);
+}
+.btn-solid{background:var(--blood);color:#fff;border-color:var(--blood-lit)}
+.btn-solid:hover:not(:disabled){background:var(--blood-lit);
+box-shadow:0 0 16px rgba(179,29,43,.45)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+
+.toast{
+position:fixed;left:50%;top:24px;transform:translateX(-50%) translateY(-20px);
+background:var(--panel-2);border:1px solid var(--brass);color:var(--paper);
+font-family:var(--font-mono);font-size:13px;letter-spacing:.04em;
+padding:10px 18px;border-radius:var(--radius);opacity:0;pointer-events:none;
+transition:opacity .3s, transform .3s;z-index:50;
+visibility:hidden;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);visibility:visible}
+
+.overlay{
+position:fixed;inset:0;background:rgba(4,4,7,.82);
+display:flex;align-items:center;justify-content:center;padding:24px;z-index:60;
+backdrop-filter:blur(3px);
+}
+.overlay[hidden]{display:none}
+.overlay-card{
+max-width:500px;width:100%;background:var(--panel);
+border:1px solid var(--line);border-top:3px solid var(--blood-lit);
+border-radius:var(--radius);padding:34px 30px;text-align:center;
+animation:drop .4s;
+}
+@keyframes drop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.overlay-card h2{
+font-family:var(--font-display);font-weight:700;
+font-size:32px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 10px;
+}
+.overlay-card p{color:var(--fog);font-size:15px;line-height:1.6;margin:0 0 22px;text-align:left}
+.overlay-card .win h2{color:var(--brass)}
+.cov{font-family:var(--font-mono);font-size:12px;color:var(--fog)}
+</style>
+
+<script>
+/* ============================================================
+DATA
+============================================================ */
+// Tracked categories — these are the four the checklist and the win
+// condition actually count.
+const CATEGORIES = {
+"explosive": {label:"Explosive precursors", color:"#a98b4b"},
+"religious": {label:"Religious artifacts", color:"#5b3a63"},
+"safehouse": {label:"Safehouse supplies", color:"#3f6d5f"},
+"weaponry": {label:"Weaponry / ammo", color:"#9c2b1f"}
+};
+
+// Decoy categories — real-looking supplier lines that don't count toward
+// anything. Shown with the same visual weight as tracked suppliers so
+// they're not obviously filler; the player has to notice they're not on
+// the Stage 1 ledger.
+const DECOY_CATEGORIES = {
+"auto": {label:"Auto & fleet parts", color:"#3d5a80"},
+"office": {label:"Office & janitorial supply", color:"#6b6f7a"}
+};
+const ALL_CATEGORIES = {...CATEGORIES, ...DECOY_CATEGORIES};
+
+// Suppliers: which category each moves, and which stores it sells to.
+// A store can appear under more than one supplier — plenty of real
+// storefronts carry stock from two different wholesalers. Several
+// suppliers here are pure noise: either a second wholesaler for a
+// category a neighbourhood already has (redundant, changes nothing) or
+// a decoy category that isn't tracked at all.
+const SUPPLIERS = [
+{
+name:"Cornbelt Agri-Supply",
+cat:"explosive",
+customers:["Warehouse Row General Supply","Southside Feed Co.","Downtown Trade & Tackle","Averyville Corner Market","Northwest Feed & Supply","West Bluff Feed Exchange","North Valley Trade Post"]
+},
+{
+name:"Sacred Heart Devotional Wholesale",
+cat:"religious",
+customers:["Southside Parish Exchange","Downtown Devotional Goods","Averyville Corner Market","Northwest Devotional Goods","Moss-Bradley Devotional Shop","West Bluff Rectory & Hardware"]
+},
+{
+name:"Bluffline Outdoor & Camp Supply",
+cat:"safehouse",
+customers:["Flats Surplus & Outfitters","Bluffline Camp Outpost","North Valley Camp Supply","East Bluff Camp Depot"]
+},
+{
+name:"Ironclad Surplus Distributing",
+cat:"weaponry",
+customers:["Warehouse Row General Supply","Downtown Trade & Tackle","Flats Surplus & Outfitters","Moss-Bradley Surplus","University East Surplus","North Valley Trade Post"]
+},
+{
+name:"Two Rivers Hardware Wholesale",
+cat:"safehouse",
+customers:["Two Rivers Loading Dock","Southside Parish Exchange","East Bluff Hardware","West Bluff Rectory & Hardware","University East Hardware","East Bluff Camp Depot"]
+},
+{
+name:"Founders Feed & Farm Co-op",
+cat:"explosive",
+customers:["Warehouse District Tool & Supply","Southside Farm Exchange","Northwest Farm Co-op","West Bluff Farm Supply","Averyville Hardware Annex"]
+},
+{
+name:"Diocesan Supply House",
+cat:"religious",
+customers:["Downtown Rectory Goods","Moss-Bradley Rectory Annex"]
+},
+{
+name:"Redline Tactical Wholesale",
+cat:"weaponry",
+customers:["Warehouse District Tool & Supply","University East Surplus Annex","North Valley Tactical Supply","Averyville Hardware Annex"]
+},
+{
+name:"Fleetline Auto Parts",
+cat:"auto",
+customers:["Riverfront Auto Salvage","Downtown Auto Row","Northwest Auto Parts","Moss-Bradley Auto Row","University East Auto Parts","Averyville Auto Repair","Downtown Rectory Goods"]
+},
+{
+name:"Prairie Office & Janitorial Supply",
+cat:"office",
+customers:["Southside Office Supply","East Bluff Office Supply","West Bluff Office Supply","North Valley Office Supply","Southside Farm Exchange","Moss-Bradley Rectory Annex","North Valley Tactical Supply"]
+}
+];
+
+// Stores grouped by their real Peoria neighbourhood. Every neighbourhood
+// gets exactly four storefronts, so store count never hints at the
+// answer — coverage comes entirely from which suppliers serve them.
+const STORES_BY_NEIGHBOURHOOD = {
+"Warehouse District": ["Warehouse Row General Supply","Two Rivers Loading Dock","Warehouse District Tool & Supply","Riverfront Auto Salvage"],
+"Southside": ["Southside Parish Exchange","Southside Feed Co.","Southside Farm Exchange","Southside Office Supply"],
+"Downtown Peoria": ["Downtown Trade & Tackle","Downtown Devotional Goods","Downtown Rectory Goods","Downtown Auto Row"],
+"Averyville": ["Averyville Corner Market","Flats Surplus & Outfitters","Averyville Hardware Annex","Averyville Auto Repair"],
+"Northwest Peoria": ["Northwest Feed & Supply","Northwest Devotional Goods","Northwest Farm Co-op","Northwest Auto Parts"],
+"East Bluff": ["Bluffline Camp Outpost","East Bluff Hardware","East Bluff Camp Depot","East Bluff Office Supply"],
+"Moss-Bradley": ["Moss-Bradley Devotional Shop","Moss-Bradley Surplus","Moss-Bradley Rectory Annex","Moss-Bradley Auto Row"],
+"West Bluff": ["West Bluff Rectory & Hardware","West Bluff Feed Exchange","West Bluff Farm Supply","West Bluff Office Supply"],
+"University East": ["University East Hardware","University East Surplus","University East Surplus Annex","University East Auto Parts"],
+"North Valley": ["North Valley Trade Post","North Valley Camp Supply","North Valley Tactical Supply","North Valley Office Supply"]
+};
+
+const BASE_NEIGHBOURHOOD = "Averyville";
+const MAX_MISTAKES = 4;
+let mistakes = 0;
+let selectedNeighbourhood = null;
+
+// store name -> array of categories (a store can carry more than one),
+// derived from SUPPLIERS.
+const STORE_CAT = {};
+SUPPLIERS.forEach(s=> s.customers.forEach(store=>{
+if(!STORE_CAT[store]) STORE_CAT[store] = [];
+STORE_CAT[store].push(s.cat);
+}));
+
+const $ = s => document.querySelector(s);
+const pipsEl = $("#pips"), toastEl = $("#toast"), confirmBtn = $("#confirm"),
+overlay = $("#overlay"), overlayCard = $("#overlayCard"),
+supplierCardsEl = $("#supplierCards"), nbBlocksEl = $("#neighbourhoodBlocks"),
+answerTilesEl = $("#answerTiles");
+
+function renderSuppliers(){
+supplierCardsEl.innerHTML = "";
+SUPPLIERS.forEach(s=>{
+const cat = ALL_CATEGORIES[s.cat];
+const card = document.createElement("div");
+card.className = "supplier-card";
+card.style.borderLeftColor = cat.color;
+card.innerHTML = `
+<div class="sup-name">${s.name}</div>
+<div class="sup-cat" style="color:${cat.color}">Moves: ${cat.label}</div>
+<div class="chip-row">${s.customers.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`;
+supplierCardsEl.appendChild(card);
+});
+}
+
+function nbId(nb){
+return nb.replace(/\s+/g,'');
+}
+
+function renderDirectory(){
+nbBlocksEl.innerHTML = "";
+Object.keys(STORES_BY_NEIGHBOURHOOD).forEach(nb=>{
+const stores = STORES_BY_NEIGHBOURHOOD[nb];
+const block = document.createElement("div");
+block.className = "nb-block";
+const checks = Object.keys(CATEGORIES).map(catKey=>{
+const cat = CATEGORIES[catKey];
+const id = `chk-${nbId(nb)}-${catKey}`;
+return `<label class="check-item" for="${id}">
+<input type="checkbox" id="${id}"><span style="color:${cat.color}">${cat.label}</span>
+</label>`;
+}).join("");
+block.innerHTML = `
+<div class="nb-name">${nb}</div>
+<ul class="stores">${stores.map(s=>`<li>${s}</li>`).join("")}</ul>
+<div class="check-row">${checks}</div>`;
+nbBlocksEl.appendChild(block);
+});
+}
+
+// A neighbourhood can only be called in once every one of its four
+// scratch checkboxes is ticked — stops players from submitting blind.
+function ticksComplete(nb){
+return Object.keys(CATEGORIES).every(catKey=>{
+const box = document.getElementById(`chk-${nbId(nb)}-${catKey}`);
+return box && box.checked;
+});
+}
+
+function renderAnswerTiles(){
+answerTilesEl.innerHTML = "";
+Object.keys(STORES_BY_NEIGHBOURHOOD).forEach(nb=>{
+const tile = document.createElement("div");
+tile.className = "answer-tile" + (selectedNeighbourhood===nb ? " sel" : "");
+tile.textContent = nb;
+tile.onclick = ()=>{
+selectedNeighbourhood = (selectedNeighbourhood===nb) ? null : nb;
+renderAnswerTiles();
+confirmBtn.disabled = selectedNeighbourhood===null;
+};
+answerTilesEl.appendChild(tile);
+});
+}
+
+function renderPips(){
+pipsEl.innerHTML = "";
+for(let i=0;i<MAX_MISTAKES;i++){
+const p=document.createElement("div");
+p.className="pip"+(i<mistakes?" spent":"");
+pipsEl.appendChild(p);
+}
+}
+
+function toast(msg){
+toastEl.textContent=msg;
+toastEl.classList.add("show");
+clearTimeout(toast._t);
+toast._t=setTimeout(()=>toastEl.classList.remove("show"),1900);
+}
+
+function coverageFor(nb){
+const cats = new Set();
+STORES_BY_NEIGHBOURHOOD[nb].forEach(store=>{
+(STORE_CAT[store]||[]).forEach(c=>{ if(CATEGORIES[c]) cats.add(c); });
+});
+return cats;
+}
+
+function confirmAnswer(){
+if(selectedNeighbourhood===null) return;
+if(!ticksComplete(selectedNeighbourhood)){
+toast(`Tick off all four categories for ${selectedNeighbourhood} before you call it.`);
+return;
+}
+if(selectedNeighbourhood===BASE_NEIGHBOURHOOD){
+onWin();
+} else {
+mistakes++;
+const el=[...answerTilesEl.children].find(t=>t.textContent===selectedNeighbourhood);
+if(el){ el.classList.add("wrong"); setTimeout(()=>el.classList.remove("wrong"),400); }
+toast("That neighbourhood doesn't hold up. Recheck the manifests.");
+renderPips();
+if(mistakes>=MAX_MISTAKES) onFail();
+}
+}
+
+function onFail(){
+overlayCard.className="overlay-card";
+overlayCard.innerHTML=`
+<h2>Trail Lost</h2>
+<p>Too many wrong calls. Work the manifests again from the top.</p>
+<button class="btn btn-solid" onclick="location.reload()">Re-open the file</button>`;
+overlay.hidden=false;
+}
+
+function onWin(){
+const cov = [...coverageFor(BASE_NEIGHBOURHOOD)].map(k=>CATEGORIES[k].label);
+overlayCard.className="overlay-card win";
+overlayCard.innerHTML=`
+<div class="win">
+<h2>There's a Lead</h2>
+<p><b>${BASE_NEIGHBOURHOOD}</b> is the only neighbourhood whose stores cover
+all four supply lines:</p>
+<p class="cov">${cov.join(" · ")}</p>
+<p>Every other block was missing at least one. Worth running down first.</p>
+<button class="btn btn-solid" onclick="overlay.hidden=true">Close file</button>
+</div>`;
+overlay.hidden=false;
+}
+
+$("#confirm").onclick = confirmAnswer;
+
+renderSuppliers();
+renderDirectory();
+renderAnswerTiles();
+renderPips();
+</script>
