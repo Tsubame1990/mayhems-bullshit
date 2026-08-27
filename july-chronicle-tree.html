@@ -34,8 +34,8 @@ link:'https://youtu.be/vi9HcvcYIx4',
 note:''},
 
 {id:'task-hotel', name:'The Hotel', prog:0, col:2.5, row:2, deps:['pellanore'],
-link:'https://tsubame1990.github.io/mayhems-bullshit/mark-twain-hotel.html',
- note:"The Mark Twain looks great from a distance. Nine stories of pale brick gone gray at the seams, the name spelled out in a vertical sign that probably glowed proudly sometime around the Eisenhower administration and now buzzes intermittently. The lobby does its best to impress, and for a moment it succeeds. The front desk is manned by a single tired clerk who looks up, nods, and goes back to whatever holds their attention on the screen — no hard questions here. The elevator arrives with a groan and a shudder, its indicator light stuttering between floors, and the hallway it opens onto smells faintly of old carpet and older cigarette smoke baked into the walls."}
+note:"The Mark Twain looks great from a distance. Nine stories of pale brick gone gray at the seams, the name spelled out in a vertical sign that probably glowed proudly sometime around the Eisenhower administration and now buzzes intermittently. The lobby does its best to impress, and for a moment it succeeds. The front desk is manned by a single tired clerk who looks up, nods, and goes back to whatever holds their attention on the screen — no hard questions here. The elevator arrives with a groan and a shudder, its indicator light stuttering between floors, and the hallway it opens onto smells faintly of old carpet and older cigarette smoke baked into the walls.",
+ extra:`<div class="card-photos"><img src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkpYDTMySKU3p6bMPezpPwIUjKSLxaf1JGFxmWUFY0LcPbd6DubueOTPyJZPoTp9MPWtvN25JiuYFF8X7PnjsGnwAnROdSaTZ9lb_NS_fc9_6Bq1nmoItbwlGzcZXxD_90vS94jnQ=w408-h544-k-no" alt="Mark Twain Hotel exterior"><img src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnbdK0UpuL3hNzs4w7eWmw1-TrRhNuirkL1mQU4jlwfkJpMMTTGyezKbnxVmhfNuhSuZClcx1hkBNGuQ5kHfA5aj7aTwXi7Hr5ILVXndu3U9oRhhMirifwhnU_XqiM6EWOh1lCWnQ=w397-h298-k-no" alt="Mark Twain Hotel room"></div><div class="card-map"><iframe src="https://www.google.com/maps?q=Mark+Twain+Hotel,225+NE+Adams+St,+Peoria,+IL+61602&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`}
 ];
 /* ========================================================== */
 </script>
@@ -86,7 +86,11 @@ font-size:17px; letter-spacing:2px; pointer-events:none;}
 
 #veil{position:fixed; inset:0; background:rgba(16,14,17,.82); display:none;
 align-items:center; justify-content:center; padding:24px; z-index:10;}
-#card{max-width:420px; width:100%; background:var(--sepia); border:1px solid var(--rose-lit);
+#card{max-width:460px; max-height:88vh; overflow-y:auto; width:100%; background:var(--sepia); border:1px solid var(--rose-lit);
+      .card-photos{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px;}
+      .card-photos img{width:100%; height:130px; object-fit:cover; display:block; border:1px solid var(--rose-lit); filter:grayscale(15%) contrast(1.05);}
+      .card-map{margin-top:12px; border:1px solid var(--rose-lit);}
+      .card-map iframe{width:100%; height:200px; border:0; filter:grayscale(55%) invert(90%) contrast(90%);}
 padding:24px 26px; position:relative;}
 #card::before{content:''; position:absolute; inset:5px; border:1px solid var(--rose); opacity:.6; pointer-events:none;}
 #card h2{font-family:'UnifrakturMaguntia', serif; font-weight:400; font-size:24px; margin:0 0 12px; color:var(--pink-swan);}
@@ -128,6 +132,7 @@ color:var(--dove); text-transform:uppercase; cursor:pointer;}
 <div id="card">
 <h2 id="cname"></h2>
 <p id="cnote"></p>
+ <div id="cextra"></div>
 <p id="clink"><a id="clink-a" href="#" target="_blank" rel="noopener noreferrer"></a></p>
 <div class="close" onclick="document.getElementById('veil').style.display='none'">— close —</div>
 </div>
@@ -241,6 +246,7 @@ svg.appendChild(g);
 function show(n){
 document.getElementById('cname').textContent=n.name;
 document.getElementById('cnote').textContent=n.note||'The Storyteller has recorded nothing here. Yet.';
+ document.getElementById('cextra').innerHTML=n.extra||'';
 const linkP=document.getElementById('clink');
 const linkA=document.getElementById('clink-a');
 if(n.link){
