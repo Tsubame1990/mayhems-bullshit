@@ -1,0 +1,90 @@
+<!doctype html>
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8">
+  <title>The Mark Twain Hotel</title>
+  <style>
+    body {
+      background: #0d0d0d;
+    color: #e8e2d5;
+        font-family: 'Courier New', monospace;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+  h1 {
+        font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #444;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+}
+  .desc {
+        line-height: 1.6;
+    color: #cfc9bc;
+        margin-bottom: 20px;
+}
+  .desc p {
+        margin: 0 0 12px;
+  }
+  .desc p:last-child {
+        margin-bottom: 0;
+}
+  .photos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .photos img {
+        width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+    filter: grayscale(20%) contrast(1.05);
+    border: 1px solid #333;
+  }
+  .map-wrap {
+        border: 1px solid #333;
+}
+  .map-wrap iframe {
+        width: 100%;
+    height: 260px;
+    border: 0;
+    filter: grayscale(60%) invert(92%) contrast(90%);
+}
+  .addr {
+          font-size: 0.85rem;
+    color: #8a8478;
+    margin-top: 8px;
+    letter-spacing: 0.03em;
+    }
+</style>
+  </head>
+  <body>
+
+  <h1>The Mark Twain Hotel</h1>
+
+  <div class="desc">
+    <p>The Mark Twain looks great from a distance. Nine stories of pale brick gone gray at the seams, the name spelled out in a vertical sign that probably glowed proudly sometime around the Eisenhower administration and now buzzes intermittently.</p>
+  <p>The lobby does its best to impress, and for a moment it succeeds. The front desk is manned by a single tired clerk who looks up, nods, and goes back to whatever holds their attention on the screen — no hard questions here.</p>
+    <p>The elevator arrives with a groan and a shudder, its indicator light stuttering between floors, and the hallway it opens onto smells faintly of old carpet and older cigarette smoke baked into the walls.</p>
+</div>
+
+<div class="photos">
+    <img src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkpYDTMySKU3p6bMPezpPwIUjKSLxaf1JGFxmWUFY0LcPbd6DubueOTPyJZPoTp9MPWtvN25JiuYFF8X7PnjsGnwAnROdSaTZ9lb_NS_fc9_6Bq1nmoItbwlGzcZXxD_90vS94jnQ=w408-h544-k-no" alt="Mark Twain Hotel exterior">
+    <img src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnbdK0UpuL3hNzs4w7eWmw1-TrRhNuirkL1mQU4jlwfkJpMMTTGyezKbnxVmhfNuhSuZClcx1hkBNGuQ5kHfA5aj7aTwXi7Hr5ILVXndu3U9oRhhMirifwhnU_XqiM6EWOh1lCWnQ=w397-h298-k-no" alt="Mark Twain Hotel view">
+  </div>
+
+  <div class="map-wrap">
+    <iframe
+      src="https://www.google.com/maps?q=Mark+Twain+Hotel,225+NE+Adams+St,+Peoria,+IL+61602&output=embed"
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+  </div>
+  <div class="addr">225 NE Adams St, Peoria, IL 61602 · currently closed</div>
+
+</body>
+</html>
