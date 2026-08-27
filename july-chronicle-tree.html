@@ -35,7 +35,11 @@ note:''},
 
 {id:'task-hotel', name:'The Hotel', prog:0, col:2.5, row:2, deps:['pellanore'],
 note:"The Mark Twain looks great from a distance. Nine stories of pale brick gone gray at the seams, the name spelled out in a vertical sign that probably glowed proudly sometime around the Eisenhower administration and now buzzes intermittently. The lobby does its best to impress, and for a moment it succeeds. The front desk is manned by a single tired clerk who looks up, nods, and goes back to whatever holds their attention on the screen — no hard questions here. The elevator arrives with a groan and a shudder, its indicator light stuttering between floors, and the hallway it opens onto smells faintly of old carpet and older cigarette smoke baked into the walls.",
- extra:`<div class="card-photos"><img src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkpYDTMySKU3p6bMPezpPwIUjKSLxaf1JGFxmWUFY0LcPbd6DubueOTPyJZPoTp9MPWtvN25JiuYFF8X7PnjsGnwAnROdSaTZ9lb_NS_fc9_6Bq1nmoItbwlGzcZXxD_90vS94jnQ=w408-h544-k-no" alt="Mark Twain Hotel exterior"><img src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnbdK0UpuL3hNzs4w7eWmw1-TrRhNuirkL1mQU4jlwfkJpMMTTGyezKbnxVmhfNuhSuZClcx1hkBNGuQ5kHfA5aj7aTwXi7Hr5ILVXndu3U9oRhhMirifwhnU_XqiM6EWOh1lCWnQ=w397-h298-k-no" alt="Mark Twain Hotel room"></div><div class="card-map"><iframe src="https://www.google.com/maps?q=Mark+Twain+Hotel,225+NE+Adams+St,+Peoria,+IL+61602&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`}
+ extra:`<div class="card-photos"><img src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkpYDTMySKU3p6bMPezpPwIUjKSLxaf1JGFxmWUFY0LcPbd6DubueOTPyJZPoTp9MPWtvN25JiuYFF8X7PnjsGnwAnROdSaTZ9lb_NS_fc9_6Bq1nmoItbwlGzcZXxD_90vS94jnQ=w408-h544-k-no" alt="Mark Twain Hotel exterior"><img src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnbdK0UpuL3hNzs4w7eWmw1-TrRhNuirkL1mQU4jlwfkJpMMTTGyezKbnxVmhfNuhSuZClcx1hkBNGuQ5kHfA5aj7aTwXi7Hr5ILVXndu3U9oRhhMirifwhnU_XqiM6EWOh1lCWnQ=w397-h298-k-no" alt="Mark Twain Hotel room"></div><div class="card-map"><iframe src="https://www.google.com/maps?q=Mark+Twain+Hotel,225+NE+Adams+St,+Peoria,+IL+61602&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`},
+
+ {id:'arrival-peoria', name:'Peoria', prog:0, col:1.5, row:3, deps:['task-game','task-vision','task-hotel'],
+  link:'https://discord.com/channels/1398219726601191444/1541792265415041135',
+  note:'Summary will be added later.'}
 ];
 /* ========================================================== */
 </script>
@@ -91,6 +95,9 @@ align-items:center; justify-content:center; padding:24px; z-index:10;}
       .card-photos img{width:100%; height:130px; object-fit:cover; display:block; border:1px solid var(--rose-lit); filter:grayscale(15%) contrast(1.05);}
       .card-map{margin-top:12px; border:1px solid var(--rose-lit);}
       .card-map iframe{width:100%; height:200px; border:0; filter:grayscale(55%) invert(90%) contrast(90%);}
+      .section-band{fill:#16303d;}
+      .section-band-edge{stroke:#4a90a4; stroke-width:1; opacity:.6;}
+      .section-label{fill:#8fb8c4; font-family:'Cormorant Garamond', Georgia, serif; font-weight:600; font-size:13px; letter-spacing:2px; pointer-events:none; opacity:.9;}
 padding:24px 26px; position:relative;}
 #card::before{content:''; position:absolute; inset:5px; border:1px solid var(--rose); opacity:.6; pointer-events:none;}
 #card h2{font-family:'UnifrakturMaguntia', serif; font-weight:400; font-size:24px; margin:0 0 12px; color:var(--pink-swan);}
@@ -155,7 +162,14 @@ return {fill:'#17090b', rim:'#33181c', rw:1, glow:false, inner:'#2a1216'};
 
 function render(){
 const maxRow=Math.max(...THREADS.map(n=>n.row));
-const H=TOP+maxRow*ROWH+DIAM+34;
+let H=TOP+maxRow*ROWH+DIAM+34;
+ const peoriaNode=THREADS.find(n=>n.id==='arrival-peoria');
+ let bandY=null;
+ if(peoriaNode){
+  const pp=pos(peoriaNode);
+  bandY=pp.y-DIAM/2-24;
+  H=Math.max(H, bandY+170);
+ }
 svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
 
 const defs=el('defs',{});
@@ -166,6 +180,16 @@ mg.appendChild(el('feMergeNode',{'in':'b'}));
 mg.appendChild(el('feMergeNode',{'in':'SourceGraphic'}));
 f.appendChild(bl); f.appendChild(mg); defs.appendChild(f);
 svg.appendChild(defs);
+
+ if(peoriaNode&&bandY!==null){
+  svg.appendChild(el('rect',{x:0,y:bandY,width:W,height:H-bandY,class:'section-band'}));
+  svg.appendChild(el('line',{x1:0,y1:bandY,x2:W,y2:bandY,class:'section-band-edge'}));
+  const labelX=18, labelY=bandY+(H-bandY)/2;
+  const label=el('text',{x:labelX,y:labelY,'text-anchor':'middle',class:'section-label',
+                         transform:`rotate(-90 ${labelX} ${labelY})`});
+  label.textContent='WELCOME TO PEORIA';
+  svg.appendChild(label);
+ }
 
 THREADS.forEach(n=>{
 n.deps.forEach(d=>{
